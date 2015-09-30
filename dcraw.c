@@ -53,6 +53,16 @@
 #include <assert.h>
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Changes by Stephen Hill
+// to fix linker errors on OSX
+#ifdef __APPLE__
+#define _fileno fileno
+#define _putenv putenv
+#define _swab swab
+#endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 #define DCRAW_VERSION "9.19"
 
 #ifndef _GNU_SOURCE
