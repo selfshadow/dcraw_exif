@@ -27,12 +27,14 @@
 // Additions by Rob Sumner to resolve errors when compiling with
 // Visual Studio 2008 or newer on 64-bit windows and leave 
 // functions necessary for simple RAW file reading intact.
+#ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS			
 #pragma warning(disable:4146)
-#define NODEPS  
 #define getc_unlocked _fgetc_nolock
 #define fseeko _fseeki64
 #define ftello _ftelli64
+#endif
+#define NODEPS
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
