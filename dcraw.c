@@ -163,11 +163,11 @@ ushort white[8][8], curve[0x10000], cr2_slice[3], sraw_mul[4];
 double pixel_aspect, aber[4]={1,1,1,1}, gamm[6]={ 0.45,4.5,0,0,0,0 };
 float bright=1, user_mul[4]={0,0,0,0}, threshold=0;
 int mask[8][4];
-int exif_focal_data[6];	// FocalPlaneXResolution, FocalPlaneYResolution, FocalPlaneResolutionUnit
+int exif_focal_data[6];	// MM FocalPlaneXResolution, FocalPlaneYResolution, FocalPlaneResolutionUnit
 int half_size=0, four_color_rgb=0, document_mode=0, highlight=0;
 int verbose=0, use_auto_wb=0, use_camera_wb=0, use_camera_matrix=1;
 int output_color=1, output_bps=8, output_tiff=0, med_passes=0;
-int crop_x=0, crop_y=0, down_sample=0;
+int crop_x=0, crop_y=0, down_sample=0; // MM
 int no_auto_bright=0;
 unsigned greybox[4] = { 0, 0, UINT_MAX, UINT_MAX };
 float cam_mul[4], pre_mul[4], cmatrix[3][4], rgb_cam[3][4];
@@ -5151,6 +5151,7 @@ void CLASS recover_highlights()
 }
 #undef SCALE
 
+// MM Begin
 void downsample()
 {
 	// can be optimized
@@ -5213,6 +5214,7 @@ void croppixels()
 	height = high;
 	image = img;
 }
+// MM End
 
 void CLASS tiff_get (unsigned base,
 	unsigned *tag, unsigned *type, unsigned *len, unsigned *save)
@@ -9909,9 +9911,9 @@ int CLASS main (int argc, const char **argv)
     puts(_("-s [0..N-1] Select one raw image or \"all\" from each file"));
     puts(_("-6        Write 16-bit instead of 8-bit"));
     puts(_("-4        Linear 16-bit, same as \"-6 -W -g 1 1\""));
-	puts(_("-T        Write TIFF instead of PPM"));
-	puts(_("-Q [0-3]  0:normal, 1:half res, 2:quarter res, 3: .. (after crop)"));
-	puts(_("-Z <x> <y> crop border pixels (done by Canon tools e.g. -Z 18 15)"));
+    puts(_("-T        Write TIFF instead of PPM"));
+    puts(_("-Q [0-3]  0:normal, 1:half res, 2:quarter res, 3: .. (after crop)")); // MM
+    puts(_("-Z <x> <y> crop border pixels (done by Canon tools e.g. -Z 18 15)")); // MM
     puts("");
     return 1;
   }
@@ -10221,6 +10223,7 @@ next:
     if (!is_foveon && colors == 3) median_filter();
     if (!is_foveon && highlight == 2) blend_highlights();
     if (!is_foveon && highlight > 2) recover_highlights();
+	// MM Begin
 	if(crop_x || crop_y)
 	{
 		// first we crop (likely needed because the sensor borders can have issues), then we downsample (so the size is the same in distance)
@@ -10234,6 +10237,7 @@ next:
 			downsample();
 		}
 	}
+	// MM End
     if (use_fuji_rotate) fuji_rotate();
 #ifndef NO_LCMS
     if (cam_profile) apply_profile (cam_profile, out_profile);
