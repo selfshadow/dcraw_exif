@@ -4847,8 +4847,8 @@ void downsample()
 
 	printf("downsample()\n");
 
-	wide = max(1, width / 2);
-	high = max(1, height/ 2);
+	wide = MAX(1, width / 2);
+	high = MAX(1, height/ 2);
 	img = (ushort(*)[4]) calloc(high, wide*sizeof *img);
 
 	for (row = 0; row < high; row++)
@@ -4883,8 +4883,8 @@ void croppixels()
 
 	printf("croppixels(%d,%d)\n", crop_x, crop_y);
 
-	wide = max(1, width - crop_x * 2);
-	high = max(1, height - crop_y * 2);
+	wide = MAX(1, width - crop_x * 2);
+	high = MAX(1, height - crop_y * 2);
 	img = (ushort(*)[4]) calloc(high, wide*sizeof *img);
 
 	for (row = 0; row < high; row++)
