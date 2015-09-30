@@ -38,6 +38,14 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+// Changes by Stephen Hill
+#ifdef _MSC_VER
+// The POSIX name for this item is deprecated. Instead, use the ISO C++ conformant name
+#pragma warning(disable:4996)
+#endif
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 // Changes by Martin Mittring
 // to resolve warnings/errors when compiling with Visual Studio 2012 or newer
 #ifdef _MSC_VER
@@ -51,16 +59,6 @@
 #define isatty _isatty
 #endif
 #include <assert.h>
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Changes by Stephen Hill
-// to fix linker errors on OSX
-#ifdef __APPLE__
-#define _fileno fileno
-#define _putenv putenv
-#define _swab swab
-#endif
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 #define DCRAW_VERSION "9.19"
@@ -96,8 +94,8 @@
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
 #define snprintf _snprintf
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
+#define strcasecmp stricmp
+#define strncasecmp strnicmp
 typedef __int64 INT64;
 typedef unsigned __int64 UINT64;
 #else
@@ -450,7 +448,7 @@ void CLASS read_shorts (ushort *pixel, int count)
 {
   if (fread (pixel, 2, count, ifp) < count) derror();
   if ((order == 0x4949) == (ntohs(0x1234) == 0x1234))
-    _swab (pixel, pixel, count*2);
+    swab (pixel, pixel, count*2);
 }
 
 void CLASS canon_600_fixed_wb (int temp)
@@ -2137,7 +2135,7 @@ fill_input_buffer (j_decompress_ptr cinfo)
   size_t nbytes;
 
   nbytes = fread (jpeg_buffer, 1, 4096, ifp);
-  _swab (jpeg_buffer, jpeg_buffer, nbytes);
+  swab (jpeg_buffer, jpeg_buffer, nbytes);
   cinfo->src->next_input_byte = jpeg_buffer;
   cinfo->src->bytes_in_buffer = nbytes;
   return TRUE;
@@ -9227,7 +9225,7 @@ void CLASS write_ppm_tiff()
 	   FORCC ppm [col*colors+c] = curve[image[soff][c]] >> 8;
       else FORCC ppm2[col*colors+c] = curve[image[soff][c]];
     if (output_bps == 16 && !output_tiff && htons(0x55aa) != 0x55aa)
-      _swab (ppm2, ppm2, width*colors*2);
+      swab (ppm2, ppm2, width*colors*2);
     fwrite (ppm, colors*output_bps/8, width, ofp);
   }
   free (ppm);
@@ -9247,7 +9245,7 @@ int CLASS main (int argc, const char **argv)
 #endif
 
 #ifndef LOCALTIME
-  _putenv ((char *) "TZ=UTC");
+  putenv ((char *) "TZ=UTC");
 #endif
 #ifdef LOCALEDIR
   setlocale (LC_CTYPE, "");
@@ -9397,8 +9395,8 @@ int CLASS main (int argc, const char **argv)
     meta_data = ofname = 0;
     ofp = stdout;
     if (setjmp (failure)) {
-      if (_fileno(ifp) > 2) fclose(ifp);
-      if (_fileno(ofp) > 2) fclose(ofp);
+      if (fileno(ifp) > 2) fclose(ifp);
+      if (fileno(ofp) > 2) fclose(ofp);
       status = 1;
       goto cleanup;
     }
