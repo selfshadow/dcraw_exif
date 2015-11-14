@@ -5470,6 +5470,15 @@ nf: order = 0x4949;
       FORC4 cam_mul[c ^ (c >> 1) ^ (i & 1)] =
 	sget2 (buf97 + (i & -2) + c*2);
     }
+    if (tag == 0xe0 && type == 3 && len == 17) {
+      ushort data[9];
+      for (i=0; i < 9; i++)
+        data[i] = get2();
+      crop_width = data[7] - data[5] + 1;
+      crop_height = data[8] - data[6] + 1;
+      crop_left_margin = data[5];
+      crop_top_margin = data[6];
+    }
     if (tag == 0x200 && len == 3)
       shot_order = (get4(),get4());
     if (tag == 0x200 && len == 4)
@@ -5547,15 +5556,6 @@ get2_256:
       FORC4 cam_mul[c ^ (c >> 1)] -= get4();
     if (tag == 0xb001)
       unique_id = get2();
-    if (tag == 0x00e0 && type == 3 && len == 17) {
-      ushort data[9];
-      for (int i = 0; i < 9; i++)
-        data[i] = get2();
-      crop_width = data[7] - data[5] + 1;
-      crop_height = data[8] - data[6] + 1;
-      crop_left_margin = data[5];
-      crop_top_margin = data[6];
-    }
 next:
     fseek (ifp, save, SEEK_SET);
   }
