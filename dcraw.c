@@ -5155,66 +5155,62 @@ void CLASS recover_highlights()
 // MM Begin
 void downsample()
 {
-	// can be optimized
-	int i, row, col;
-	ushort wide, high, (*img)[4], (*pix)[4];
-	int dx, dy;
+  // can be optimized
+  int i, row, col;
+  ushort wide, high, (*img)[4], (*pix)[4];
+  int dx, dy;
 
-	printf("downsample()\n");
+  wide = MAX(1, width / 2);
+  high = MAX(1, height/ 2);
+  img = (ushort(*)[4]) calloc(high, wide*sizeof *img);
 
-	wide = MAX(1, width / 2);
-	high = MAX(1, height/ 2);
-	img = (ushort(*)[4]) calloc(high, wide*sizeof *img);
+  for (row = 0; row < high; row++)
+  for (col = 0; col < wide; col++)
+  for (i = 0; i < colors; i++)
+  {
+    unsigned int sum = 0, count = 0;
 
-	for (row = 0; row < high; row++)
-	for (col = 0; col < wide; col++)
-	for (i = 0; i < colors; i++)
-	{
-		unsigned int sum = 0, count = 0;
+    for(dy = row * 2; dy < row * 2 + 2; ++dy)
+    for(dx = col * 2; dx < col * 2 + 2; ++dx)
+    {
+      if (dy > height || dx > width)
+        continue;
 
-		for(dy = row * 2; dy < row * 2 + 2; ++dy)
-		for(dx = col * 2; dx < col * 2 + 2; ++dx)
-		{
-			if (dy > height || dx > width)
-				continue;
+      pix = image + dy*width + dx;
+      sum += pix[0][i];
+      ++count;
+    }
 
-			pix = image + dy*width + dx;
-			sum += pix[0][i];
-			++count;
-		}
-
-		img[row*wide + col][i] = sum / count;
-	}
-	free(image);
-	width = wide;
-	height = high;
-	image = img;
+    img[row*wide + col][i] = sum / count;
+  }
+  free(image);
+  width = wide;
+  height = high;
+  image = img;
 }
 
 void croppixels()
 {
-	int i, row, col;
-	ushort (*img)[4], (*pix)[4];
+  int i, row, col;
+  ushort (*img)[4], (*pix)[4];
 
-	int crop_x = crop_left_margin - left_margin;
-	int crop_y = crop_top_margin - top_margin;
+  int crop_x = crop_left_margin - left_margin;
+  int crop_y = crop_top_margin - top_margin;
 
-	printf("croppixels(%d,%d)\n", crop_x, crop_y);
+  img = (ushort(*)[4]) calloc(crop_height, crop_width*sizeof *img);
 
-	img = (ushort(*)[4]) calloc(crop_height, crop_width*sizeof *img);
+  for (row = 0; row < crop_height; row++)
+  for (col = 0; col < crop_width; col++)
+  for (i = 0; i < colors; i++)
+  {
+    pix = image + (row+crop_y)*width + (col+crop_x);
 
-	for (row = 0; row < crop_height; row++)
-	for (col = 0; col < crop_width; col++)
-	for (i = 0; i < colors; i++)
-	{
-		pix = image + (row+crop_y)*width + (col+crop_x);
-
-		img[row*crop_width + col][i] = pix[0][i];
-	}
-	free(image);
-	width = crop_width;
-	height = crop_height;
-	image = img;
+    img[row*crop_width + col][i] = pix[0][i];
+  }
+  free(image);
+  width = crop_width;
+  height = crop_height;
+  image = img;
 }
 // MM End
 
@@ -9923,7 +9919,7 @@ int CLASS main (int argc, const char **argv)
     puts(_("-6        Write 16-bit instead of 8-bit"));
     puts(_("-4        Linear 16-bit, same as \"-6 -W -g 1 1\""));
     puts(_("-T        Write TIFF instead of PPM"));
-    puts(_("-Q [0-3]  0:normal, 1:half res, 2:quarter res, 3: .. (after crop)")); // MM
+    puts(_("-Q [0-3]  0:normal, 1:half res, 2:quarter res, 3: ... (after crop)")); // MM
     puts(_("-Z        crop border pixels (done by Canon tools)")); // MM
     puts("");
     return 1;
@@ -9985,9 +9981,9 @@ int CLASS main (int argc, const char **argv)
       case 'd':  document_mode++;
       case 'j':  use_fuji_rotate   = 0;  break;
       case 'W':  no_auto_bright    = 1;  break;
-	  case 'T':  output_tiff       = 1;  break;
-	  case 'Q':  down_sample = atoi(argv[arg++]);  break;
-	  case 'Z':  crop = 1;  break;
+      case 'T':  output_tiff       = 1;  break;
+      case 'Q':  down_sample       = atoi(argv[arg++]);  break;
+      case 'Z':  crop              = 1;  break;
       case '4':  gamm[0] = gamm[1] =
 		 no_auto_bright    = 1;
       case '6':  output_bps       = 16;  break;
@@ -10234,21 +10230,13 @@ next:
     if (!is_foveon && colors == 3) median_filter();
     if (!is_foveon && highlight == 2) blend_highlights();
     if (!is_foveon && highlight > 2) recover_highlights();
-	// MM Begin
-	if(crop)
-	{
-		// first we crop (likely needed because the sensor borders can have issues), then we downsample (so the size is the same in distance)
-		croppixels();
-	}
-	{
-		int pass;
-
-		for(pass = 0; pass < down_sample; ++pass)
-		{
-			downsample();
-		}
-	}
-	// MM End
+    // MM Begin
+    // first we crop (likely needed because the sensor borders can have issues),
+    // then we downsample (so the size is the same in distance)
+    if (crop) croppixels();
+    for (i=0; i < down_sample; i++)
+      downsample();
+    // MM End
     if (use_fuji_rotate) fuji_rotate();
 #ifndef NO_LCMS
     if (cam_profile) apply_profile (cam_profile, out_profile);
