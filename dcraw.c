@@ -157,6 +157,7 @@ unsigned zero_after_ff, is_raw, dng_version, is_foveon, data_error;
 unsigned tile_width, tile_length, gpsdata[32], load_flags;
 unsigned flip, tiff_flip, filters, colors;
 ushort raw_height, raw_width, height, width, top_margin, left_margin;
+ushort crop_height=0, crop_width=0, crop_top_margin=0, crop_left_margin=0;
 ushort shrink, iheight, iwidth, fuji_width, thumb_width, thumb_height;
 ushort *raw_image, (*image)[4], cblack[4102];
 ushort white[8][8], curve[0x10000], cr2_slice[3], sraw_mul[4];
@@ -167,7 +168,7 @@ int exif_focal_data[6];	// MM FocalPlaneXResolution, FocalPlaneYResolution, Foca
 int half_size=0, four_color_rgb=0, document_mode=0, highlight=0;
 int verbose=0, use_auto_wb=0, use_camera_wb=0, use_camera_matrix=1;
 int output_color=1, output_bps=8, output_tiff=0, med_passes=0;
-int crop_x=0, crop_y=0, down_sample=0; // MM
+int crop=0, down_sample=0; // MM
 int no_auto_bright=0;
 unsigned greybox[4] = { 0, 0, UINT_MAX, UINT_MAX };
 float cam_mul[4], pre_mul[4], cmatrix[3][4], rgb_cam[3][4];
@@ -5193,25 +5194,26 @@ void downsample()
 void croppixels()
 {
 	int i, row, col;
-	ushort wide, high, (*img)[4], (*pix)[4];
+	ushort (*img)[4], (*pix)[4];
+
+	int crop_x = crop_left_margin - left_margin;
+	int crop_y = crop_top_margin - top_margin;
 
 	printf("croppixels(%d,%d)\n", crop_x, crop_y);
 
-	wide = MAX(1, width - crop_x * 2);
-	high = MAX(1, height - crop_y * 2);
-	img = (ushort(*)[4]) calloc(high, wide*sizeof *img);
+	img = (ushort(*)[4]) calloc(crop_height, crop_width*sizeof *img);
 
-	for (row = 0; row < high; row++)
-	for (col = 0; col < wide; col++)
+	for (row = 0; row < crop_height; row++)
+	for (col = 0; col < crop_width; col++)
 	for (i = 0; i < colors; i++)
 	{
 		pix = image + (row+crop_y)*width + (col+crop_x);
 
-		img[row*wide + col][i] = pix[0][i];
+		img[row*crop_width + col][i] = pix[0][i];
 	}
 	free(image);
-	width = wide;
-	height = high;
+	width = crop_width;
+	height = crop_height;
 	image = img;
 }
 // MM End
@@ -5549,6 +5551,15 @@ get2_256:
       FORC4 cam_mul[c ^ (c >> 1)] -= get4();
     if (tag == 0xb001)
       unique_id = get2();
+    if (tag == 0x00e0 && type == 3 && len == 17) {
+      ushort data[9];
+      for (int i = 0; i < 9; i++)
+        data[i] = get2();
+      crop_width = data[7] - data[5] + 1;
+      crop_height = data[8] - data[6] + 1;
+      crop_left_margin = data[5];
+      crop_top_margin = data[6];
+    }
 next:
     fseek (ifp, save, SEEK_SET);
   }
@@ -9913,7 +9924,7 @@ int CLASS main (int argc, const char **argv)
     puts(_("-4        Linear 16-bit, same as \"-6 -W -g 1 1\""));
     puts(_("-T        Write TIFF instead of PPM"));
     puts(_("-Q [0-3]  0:normal, 1:half res, 2:quarter res, 3: .. (after crop)")); // MM
-    puts(_("-Z <x> <y> crop border pixels (done by Canon tools e.g. -Z 18 15)")); // MM
+    puts(_("-Z        crop border pixels (done by Canon tools)")); // MM
     puts("");
     return 1;
   }
@@ -9976,7 +9987,7 @@ int CLASS main (int argc, const char **argv)
       case 'W':  no_auto_bright    = 1;  break;
 	  case 'T':  output_tiff       = 1;  break;
 	  case 'Q':  down_sample = atoi(argv[arg++]);  break;
-	  case 'Z':  crop_x = atoi(argv[arg++]); crop_y = atoi(argv[arg++]);  break;
+	  case 'Z':  crop = 1;  break;
       case '4':  gamm[0] = gamm[1] =
 		 no_auto_bright    = 1;
       case '6':  output_bps       = 16;  break;
@@ -10224,7 +10235,7 @@ next:
     if (!is_foveon && highlight == 2) blend_highlights();
     if (!is_foveon && highlight > 2) recover_highlights();
 	// MM Begin
-	if(crop_x || crop_y)
+	if(crop)
 	{
 		// first we crop (likely needed because the sensor borders can have issues), then we downsample (so the size is the same in distance)
 		croppixels();
